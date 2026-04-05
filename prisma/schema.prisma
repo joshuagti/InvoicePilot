@@ -1,0 +1,202 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Mailbox {
+  id                       String    @id @default(cuid())
+  name                     String
+  host                     String
+  port                     Int
+  username                 String
+  passwordEnc              String
+  tls                      Boolean   @default(true)
+  isActive                 Boolean   @default(true)
+  /** When null, polling only considers messages from the initial lookback window (see poll-mail) until caught up. */
+  initialSyncCompletedAt   DateTime?
+  createdAt                DateTime  @default(now())
+  updatedAt                DateTime  @updatedAt
+
+  emails        Email[]
+}
+
+model Email {
+  id                String   @id @default(cuid())
+  mailboxId         String
+  messageIdHeader   String?
+  imapUid           String?
+  threadId          String?
+  fromName          String?
+  fromEmail         String?
+  senderDomain      String?
+  subject           String?
+  sentAt            DateTime?
+  receivedAt        DateTime?
+  textBody          String?  @db.LongText
+  htmlBody          String?  @db.LongText
+  normalizedText    String?  @db.LongText
+  hasAttachments    Boolean  @default(false)
+  ingestStatus      String   @default("pending")
+  processedAt       DateTime?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  mailbox           Mailbox  @relation(fields: [mailboxId], references: [id])
+  attachments       EmailAttachment[]
+  documents         Document[]
+
+  @@index([mailboxId])
+  @@index([fromEmail])
+  @@index([senderDomain])
+  @@index([receivedAt])
+  @@unique([mailboxId, imapUid])
+}
+
+model EmailAttachment {
+  id                String   @id @default(cuid())
+  emailId           String
+  filename          String?
+  contentType       String?
+  sizeBytes         Int?
+  extractedText     String?  @db.LongText
+  storagePath       String?
+  checksum          String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  email             Email    @relation(fields: [emailId], references: [id], onDelete: Cascade)
+  documentsAsPrimary Document[] @relation("PrimaryAttachment")
+}
+
+model Supplier {
+  id                        String   @id @default(cuid())
+  name                      String
+  normalizedName            String   @unique
+  paymentModel              String?
+  countStatementsByDefault  Boolean?
+  countInvoicesByDefault    Boolean?
+  confidenceScore           Decimal? @db.Decimal(4, 3)
+  notes                     String?  @db.LongText
+  createdAt                 DateTime @default(now())
+  updatedAt                 DateTime @updatedAt
+
+  domains                   SupplierDomain[]
+  rules                     SupplierRule[]
+  documents                 Document[]
+  reviewDecisions           ReviewDecision[]
+}
+
+model SupplierDomain {
+  id                String   @id @default(cuid())
+  supplierId        String
+  domain            String
+  createdAt         DateTime @default(now())
+
+  supplier          Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+
+  @@unique([supplierId, domain])
+  @@index([domain])
+}
+
+model Document {
+  id                String   @id @default(cuid())
+  emailId           String
+  supplierId        String?
+  primaryAttachmentId String?
+
+  documentType      String?
+  paymentModelGuess String?
+  countDecision     String   @default("review_required")
+
+  supplierNameRaw   String?
+  accountReference  String?
+  documentDate      DateTime?
+  dueDate           DateTime?
+  currency          String?  @db.VarChar(32)
+  amountDue         Decimal? @db.Decimal(12, 2)
+
+  aiConfidence      Decimal? @db.Decimal(4, 3)
+  aiReason          String?  @db.LongText
+  unsureReason      String?  @db.LongText
+  extractionJson    Json?
+
+  status            String   @default("pending")
+  reviewState       String   @default("needs_review")
+
+  paidAt            DateTime?
+  paidNote          String?  @db.VarChar(500)
+
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  email             Email    @relation(fields: [emailId], references: [id], onDelete: Cascade)
+  supplier          Supplier? @relation(fields: [supplierId], references: [id])
+  primaryAttachment EmailAttachment? @relation("PrimaryAttachment", fields: [primaryAttachmentId], references: [id])
+  reviewDecisions   ReviewDecision[]
+
+  @@index([supplierId])
+  @@index([documentType])
+  @@index([countDecision])
+  @@index([status])
+  @@index([documentDate])
+  @@index([paidAt])
+}
+
+model SupplierRule {
+  id                String   @id @default(cuid())
+  supplierId        String
+  ruleType          String
+  senderDomain      String?
+  senderEmail       String?
+  subjectPattern    String?
+  attachmentPattern String?
+  documentType      String?
+  shouldCount       Boolean?
+  paymentModel      String?
+  confidenceScore   Decimal? @db.Decimal(4, 3)
+  learnedFromCount  Int      @default(1)
+  isUserConfirmed   Boolean  @default(false)
+  isActive          Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  supplier          Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+
+  @@index([supplierId])
+  @@index([ruleType])
+}
+
+model ReviewDecision {
+  id                String   @id @default(cuid())
+  documentId        String
+  supplierId        String?
+  predictedType     String?
+  predictedCount    Boolean?
+  finalType         String?
+  finalCount        Boolean?
+  finalPaymentModel String?
+  decisionScope     String
+  userNote          String?  @db.LongText
+  createdAt         DateTime @default(now())
+
+  document          Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  supplier          Supplier? @relation(fields: [supplierId], references: [id])
+
+  @@index([supplierId])
+  @@index([decisionScope])
+}
+
+model AuditEvent {
+  id                String   @id @default(cuid())
+  entityType        String
+  entityId          String
+  action            String
+  payload           Json?
+  createdAt         DateTime @default(now())
+
+  @@index([entityType, entityId])
+}
