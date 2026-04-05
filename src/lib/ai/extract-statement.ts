@@ -1,5 +1,6 @@
 import OpenAI from "openai";
 import { ExtractionSchema, type ExtractionResult } from "@/lib/ai/schemas";
+import { getOpenAIApiKeyFromStore } from "@/lib/settings/openai-key";
 import { logger } from "@/lib/utils/logger";
 
 const SYSTEM_PROMPT = `You are classifying supplier-related business emails and attached statement/invoice text.
@@ -58,9 +59,12 @@ export async function extractWithOpenAI(
   normalizedContent: string,
   options?: { retryStrict?: boolean }
 ): Promise<{ ok: true; data: ExtractionResult } | { ok: false; error: string; raw?: string }> {
-  const apiKey = process.env.OPENAI_API_KEY;
+  const apiKey = await getOpenAIApiKeyFromStore();
   if (!apiKey) {
-    return { ok: false, error: "OPENAI_API_KEY is not configured" };
+    return {
+      ok: false,
+      error: "OpenAI API key is not configured. Add it under Dashboard → Settings.",
+    };
   }
 
   const model = process.env.OPENAI_MODEL ?? "gpt-4o-mini";

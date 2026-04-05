@@ -62,7 +62,8 @@ export async function middleware(request: NextRequest) {
     path.startsWith("/api/mail") ||
     path.startsWith("/api/statements") ||
     path.startsWith("/api/suppliers") ||
-    path.startsWith("/api/mailboxes");
+    path.startsWith("/api/mailboxes") ||
+    path.startsWith("/api/settings");
 
   if (!protectedPrefix) {
     return NextResponse.next();
@@ -90,5 +91,12 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/api/mail/:path*", "/api/statements/:path*", "/api/suppliers/:path*", "/api/mailboxes/:path*"],
+  matcher: [
+    "/dashboard/:path*",
+    "/api/mail/:path*",
+    "/api/statements/:path*",
+    "/api/suppliers/:path*",
+    "/api/mailboxes/:path*",
+    "/api/settings/:path*",
+  ],
 };

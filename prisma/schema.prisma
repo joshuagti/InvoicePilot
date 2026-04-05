@@ -200,3 +200,10 @@ model AuditEvent {
 
   @@index([entityType, entityId])
 }
+
+/** Single-row style key/value; valueEnc holds secrets encrypted with ENCRYPTION_KEY. */
+model AppSetting {
+  key       String   @id
+  valueEnc  String   @db.LongText
+  updatedAt DateTime @default(now()) @updatedAt
+}

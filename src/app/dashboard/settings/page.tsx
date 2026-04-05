@@ -1,3 +1,4 @@
+import { OpenAiApiKeySettings } from "@/components/dashboard/openai-api-key-settings";
 import { ReprocessAiButton } from "@/components/dashboard/reprocess-ai-button";
 
 export default function SettingsPage() {
@@ -10,6 +11,16 @@ export default function SettingsPage() {
           ingestion, using the email body and any extracted attachment text already saved in the database.
         </p>
       </div>
+
+      <section className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4">
+        <h2 className="text-sm font-medium text-[var(--text)]">OpenAI</h2>
+        <p className="mt-1 text-sm text-[var(--muted)]">
+          The API key is stored encrypted in the database (same mechanism as mailbox passwords). Model id
+          stays optional in the environment as <code className="text-[var(--text)]">OPENAI_MODEL</code>{" "}
+          (defaults to <code className="text-[var(--text)]">gpt-4o-mini</code>).
+        </p>
+        <OpenAiApiKeySettings />
+      </section>
 
       <section className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4">
         <h2 className="text-sm font-medium text-[var(--text)]">AI extraction</h2>
